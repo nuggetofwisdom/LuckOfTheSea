@@ -1,2 +1,2 @@
 # LuckOfTheSea
-A phishing link detector.
+Machine learning phishing URL detector: data pipeline, feature engineering, model evaluation, and a deployed API.
