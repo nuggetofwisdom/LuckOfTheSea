@@ -7,6 +7,7 @@ from phishdetect.features import (
     FEATURE_NAMES,
     extract_features,
     levenshtein,
+    model_input,
     red_flags,
     registered_domain,
     shannon_entropy,
@@ -94,3 +95,9 @@ def test_hosting_sites_count_as_separate_sites():
     assert registered_domain("https://evil-login.weebly.com/x") == "evil-login.weebly.com"
     assert registered_domain("https://mybank-verify.web.app/") == "mybank-verify.web.app"
     assert registered_domain("https://nuggetofwisdom.github.io/") == "nuggetofwisdom.github.io"
+
+
+def test_model_input_has_features_and_url():
+    X = model_input(["https://github.com", "paypa1.com/login"])
+    assert list(X.columns) == FEATURE_NAMES + ["url"]
+    assert X.url.tolist() == ["https://github.com", "paypa1.com/login"]

@@ -270,6 +270,15 @@ def features_dataframe(urls):
     return pd.DataFrame([extract_features(u) for u in urls], columns=FEATURE_NAMES)
 
 
+def model_input(urls):
+    # what every model gets: the 34 features plus the url itself. the feature
+    # models ignore the url column and the char model only looks at that
+    urls = [str(u) for u in urls]
+    X = features_dataframe(urls)
+    X["url"] = urls
+    return X
+
+
 def red_flags(url):
     # Plain english reasons a url looks sketchy. These are just rules, NOT
     # what the model is thinking - it's so the API has something readable
