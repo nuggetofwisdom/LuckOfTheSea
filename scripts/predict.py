@@ -7,6 +7,9 @@ flags it spotted (sketchy tld, ip address instead of a domain, stuff like that)
 urls on a trusted domain (seeds/top_domains.txt, see make_allowlist.py) skip the
 model. use --no-allowlist to see what the model thinks of them anyway
 
+if the model says legit but the domain has a brand name in it (chase-alerts.online)
+it says SUSPICIOUS instead, the real brand sites are on the allowlist anyway
+
 run from the repo root:
     python -m scripts.predict "http://paypa1-secure-login.xyz/verify.php" "https://github.com/JacobMo28"
     python -m scripts.predict --threshold 0.8 "http://some-sketchy-site.top/login"
@@ -60,7 +63,8 @@ def main():
 
         # a bit.ly link says nothing about where it actually goes, so don't guess.
         # every shortener in my data was phishing, so the model would just say phishing
-        if extract_features(url)["is_url_shortener"]:
+        f = extract_features(url)
+        if f["is_url_shortener"]:
             verdict = "can't tell"
             print(f"{verdict:>16}  {'--':>6}  {url}")
             print(f"{'':>26}- Link shortener hides the real destination, expand it and check that instead")
@@ -68,6 +72,11 @@ def main():
 
         if prob >= threshold:
             verdict = "PHISHING"
+        elif f["brand_lookalike"] or f["brand_inside_domain_label"]:
+            # a brand name (or a disguised one) in a domain that isn't on the
+            # allowlist is almost never legit, chase-alerts.online, micros0ft-online.com etc.
+            # the real brand sites are on the allowlist so they never get here
+            verdict = "SUSPICIOUS"
         else:
             verdict = "looks legitimate"
 
