@@ -28,3 +28,11 @@ def test_shared_hosting_never_trusted():
 
 def test_missing_file_is_empty(tmp_path):
     assert load_allowlist(tmp_path / "nope.txt") == set()
+
+
+def test_brand_tlds_are_trusted():
+    # only microsoft can register .microsoft, same for .google
+    assert is_trusted("https://outlook.cloud.microsoft/mail/inbox", set())
+    assert is_trusted("https://blog.google/", set())
+    # but not a .com pretending to be one
+    assert not is_trusted("https://cloud-microsoft.com/", set())

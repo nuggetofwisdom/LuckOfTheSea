@@ -32,6 +32,12 @@ SHARED_HOSTS = (
 )
 
 
+# top level domains that belong to one company, nobody else can register a
+# .microsoft or .google domain. outlook.cloud.microsoft is the real outlook
+BRAND_TLDS = {"microsoft", "office", "windows", "xbox", "azure", "bing",
+              "google", "youtube", "apple", "amazon", "aws"}
+
+
 def load_allowlist(path=DEFAULT_ALLOWLIST_PATH):
     # one domain per line. no file = empty list, so everything goes to the model
     path = Path(path)
@@ -57,5 +63,7 @@ def is_trusted(url, allowlist):
         return False
     if is_shared_host(host):
         return False
+    if host.rsplit(".", 1)[-1] in BRAND_TLDS:
+        return True
     domain = registered_domain(url)
     return domain in allowlist and domain not in URL_SHORTENERS
