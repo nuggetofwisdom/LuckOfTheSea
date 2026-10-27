@@ -26,10 +26,13 @@ python -m scripts.collect_data     # 1. pull phishing + legit URLs into data/raw
 python -m scripts.add_urls seeds/legit_logins.txt --label legit --source legit_logins   # optional, add my own url lists
 python -m scripts.build_dataset    # 2. dedupe, cap per-domain, balance -> data/processed/dataset.csv
 python -m scripts.train            # 3. train and compare models -> models/model.joblib, reports/
-python -m scripts.predict "http://paypal.com.secure-verify.xyz/signin.php"   # 4. score URLs
+python -m scripts.make_allowlist   # 4. trusted domains that skip the model -> seeds/top_domains.txt
+python -m scripts.predict "http://paypal.com.secure-verify.xyz/signin.php"   # 5. score URLs
 ```
 
 The phishing feeds only list sites that are live right now, so run `collect_data` once a day for a couple of weeks to build up data. Each run writes new dated files. With two or more weeks collected, `python -m scripts.train --split time --cutoff YYYY-MM-DD` gives the most realistic test.
+
+`predict` checks the allowlist first. Anything on a trusted domain (Tranco top 10k, minus shorteners and sites where anyone can host a page like Google Docs or GitHub Pages) skips the model, since the model can't know accounts.google.com is the real Google from the text. This isn't a model feature on purpose: my legit training data comes from Tranco, so the model would just learn the answer key. Use `--no-allowlist` to see the model's score anyway.
 
 `predict` uses the threshold picked during training (about 1% false alarms on validation). Use `--threshold` to change it.
 
@@ -40,10 +43,12 @@ The phishing feeds only list sites that are live right now, so run `collect_data
 ```
 phishdetect/
   features.py      URL -> 34 features, plus human-readable red flags
+  allowlist.py     trusted domains that skip the model
   model_io.py      save/load the trained model
 scripts/
   collect_data.py  OpenPhish, PhishTank, Phishunt (phishing); Tranco + sitemaps (legit)
   add_urls.py      add my own list of URLs (like seeds/legit_logins.txt)
+  make_allowlist.py  download the Tranco top sites as the allowlist
   build_dataset.py clean and balance the raw data
   train.py         train, evaluate, and save the best model
   predict.py       score URLs from the command line
