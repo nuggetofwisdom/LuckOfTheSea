@@ -8,7 +8,8 @@ what it does:
        VALIDATION  for picking the best model and its threshold
        TEST        not touched until the very end, like a final exam. it
                    wasn't used to pick anything so its score is honest
-  3. trains six models, from dumbest to smartest
+  3. trains six models, from dumbest to smartest, plus one that averages
+     XGBoost and the char n-gram model
   4. picks a threshold for each model on validation (the cutoff where about
      1% of legit urls get flagged) and picks the best model (most phishing
      caught while false alarms stay under 5%, see low_fpr_recall)
@@ -42,7 +43,8 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.dummy import DummyClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.base import clone
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score, confusion_matrix,
@@ -303,7 +305,7 @@ def main():
     probs = {}
     fitted = {}
     thresholds = {}
-    for name, model in build_models().items():
+    def train_and_score(name, model):
         print(f"Training {name}...")
         tuned = None
         if name in TUNING:
@@ -334,6 +336,19 @@ def main():
         probs[name] = prob
         fitted[name] = model
 
+    for name, model in build_models().items():
+        train_and_score(name, model)
+
+    # average XGBoost and the char n-gram model. they're about as good as each
+    # other but make different mistakes, XGBoost sees my brand/tld features and
+    # the n-gram model reads the raw url, so averaging them should beat both.
+    # clone() copies the settings tune() picked without the training
+    averaged = VotingClassifier([
+        ("xgboost", clone(fitted["XGBoost"])),
+        ("chars", clone(fitted["Char n-grams"])),
+    ], voting="soft")
+    train_and_score("XGBoost + Char n-grams (averaged)", averaged)
+
     # pick the winner on VALIDATION, whoever catches the most phishing while
     # false alarms stay low. the baseline obviously isn't allowed to win
     real_models = [n for n in results if not n.startswith("Baseline")]
@@ -342,7 +357,7 @@ def main():
 
     # --- results table (this is the one that goes in the README) ---
     cols = ["accuracy", "precision", "recall", "f1", "false_positive_rate", "roc_auc", "recall_at_1pct_fpr"]
-    table = pd.DataFrame(results).T[cols]
+    table = pd.DataFrame(results).T[cols].astype(float)
     table.insert(0, "val_low_fpr_recall", [val_results[n]["low_fpr_recall"] for n in table.index])
     print("\nTest set, each model at the threshold picked on validation:")
     print(table.round(3).to_string())

@@ -2,7 +2,7 @@
 
 A machine learning phishing URL detector: data pipeline, feature engineering, model evaluation, and a deployed API.
 
-It only looks at the URL text (no page fetching). Each URL gets turned into 34 features, and I compare 6 models, from a baseline up to XGBoost and a character n-gram model that reads the raw URL. Data is split into train, validation, and test so no website shows up in more than one. The model and its threshold get picked on validation, and test is only scored at the end.
+It only looks at the URL text (no page fetching). Each URL gets turned into 34 features, and I compare 7 models, from a baseline up to XGBoost, a character n-gram model that reads the raw URL, and an average of those two. Data is split into train, validation, and test so no website shows up in more than one. The model and its threshold get picked on validation, and test is only scored at the end.
 
 ## Setup
 
