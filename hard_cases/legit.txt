@@ -1,0 +1,15 @@
+# real urls that look phishy: login words, brands, long tracking params, shorteners, free hosting
+https://accounts.google.com/v3/signin/identifier?continue=https%3A%2F%2Fmail.google.com%2Fmail%2F&service=mail
+https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=abc&response_type=code
+https://www.amazon.com/gp/your-account/order-details?orderID=112-1234567-1234567
+https://www.linkedin.com/comm/jobs/view/1234567890?trackingId=abc&utm_source=email&utm_medium=jobs
+https://www.ups.com/track?loc=en_US&tracknum=1Z999AA10123456784
+https://www.paypal.com/us/smarthelp/contact-us
+https://www.chase.com/personal/online-banking/login-account-access
+https://support.apple.com/en-us/102568
+https://www.usps.com/manage/package-intercept.htm
+https://www.irs.gov/payments
+https://secure.login.gov/
+https://nuggetofwisdom.github.io/
+https://bit.ly/3abcdef
+https://www.byui.edu/

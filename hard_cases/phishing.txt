@@ -1,0 +1,13 @@
+# made-up phishing-style urls: https, free hosting, no obvious brand, homographs
+https://secure-account-review.web.app/
+https://docs-shared-file.weebly.com/
+https://www.account-security-check.com/verify?session=8f3a9c
+https://appleid.apple.com.signin-verify.net/
+https://micros0ft-online.com/login
+https://paypal-resolution-center.pages.dev/
+https://login.office365-auth.info/owa/
+https://usps-redelivery-notice.top/track?id=US9514901185421
+https://chase-alerts.online/secure/
+https://drive-google-share.github.io/file/view
+https://xn--pple-43d.com/
+https://wellsfargo.secure-login.workers.dev/
