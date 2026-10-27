@@ -73,3 +73,18 @@ def test_red_flags_are_strings():
     flags = red_flags("http://192.168.0.1/paypal/verify-account/login.php")
     assert flags
     assert all(isinstance(f, str) for f in flags)
+
+
+def test_short_brands_have_to_be_whole_words():
+    # "ups" is in "groups" and "att"/"irs" are in "attachments/first", none of those are brands
+    assert extract_features("https://www.reddit.com/r/groups/")["brand_outside_domain"] == 0
+    assert extract_features("https://example.com/attachments/first.pdf")["brand_outside_domain"] == 0
+    # the real thing should still count
+    assert extract_features("https://track.example.xyz/ups/parcel")["brand_outside_domain"] == 1
+    assert extract_features("https://secure-ups-delivery.com/")["brand_inside_domain_label"] == 1
+    assert extract_features("https://login.securepaypal.com/")["brand_inside_domain_label"] == 1
+
+
+def test_lookalike_has_to_be_close():
+    assert extract_features("https://amaz0n.com/")["brand_lookalike"] == 1
+    assert extract_features("https://apps.com/")["brand_lookalike"] == 0  # 2 letters off from apple, too far

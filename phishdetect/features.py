@@ -54,6 +54,15 @@ SUSPICIOUS_TLDS = {
     "ga", "cf", "gq", "info", "work", "support",
 }
 
+# short brands like att, ups, irs, dhl show up inside normal words ("groups",
+# "attachments", "first") so those only count as a whole word. longer ones are
+# unique enough to match inside a word too, like "securepaypal"
+SUBSTRING_BRAND_MIN = 6
+
+# only check edit distance against longer brands. pretty much any short word
+# is 1 or 2 letters off from "ups" or "att"
+LOOKALIKE_BRANDS = [b for b in BRANDS if len(b) >= 5]
+
 SUSPICIOUS_EXTENSIONS = (".php", ".html", ".htm", ".asp", ".aspx", ".js", ".exe", ".zip")
 
 
@@ -71,6 +80,28 @@ def _strip_www(url):
     # sitemaps list the official www. version of every site, so "has www" ended
     # up meaning "legit" to the model. drop it, but only at the very start of the host
     return re.sub(r"^((?:[a-zA-Z][a-zA-Z0-9+.-]*://)?)www\.", r"\1", url, flags=re.IGNORECASE)
+
+
+def _words(text):
+    # "secure-paypal.com/login_now" -> ["secure", "paypal", "com", "login", "now"]
+    return [w for w in re.split(r"[^a-z0-9]+", text.lower()) if w]
+
+
+def _mentions_brand(text, brand):
+    if brand in _words(text):
+        return True
+    if len(brand) >= SUBSTRING_BRAND_MIN and brand in text:
+        return True
+    return False
+
+
+def _is_lookalike(label, brand):
+    # paypa1 vs paypal is 1 edit. short brands only get 1 edit, longer ones
+    # get 2, otherwise "apps" counts as a fake "apple"
+    dist = levenshtein(label, brand)
+    if len(brand) <= 6:
+        return 0 < dist <= 1
+    return 0 < dist <= 2
 
 
 def shannon_entropy(text):
@@ -154,9 +185,10 @@ def extract_features(url) -> dict[str, float]:
 
     # brand stuff - is a brand name showing up somewhere it shouldn't?
     outside = subdomain + "/" + path + "?" + query
-    brand_elsewhere = any(b in outside and b != domain_label for b in BRANDS)
-    brand_in_label = any(b in domain_label and b != domain_label for b in BRANDS)
-    min_brand_dist = min((levenshtein(domain_label, b) for b in BRANDS), default=99)
+    brand_elsewhere = any(b != domain_label and _mentions_brand(outside, b) for b in BRANDS)
+    brand_in_label = any(b != domain_label and _mentions_brand(domain_label, b) for b in BRANDS)
+    min_brand_dist = min((levenshtein(domain_label, b) for b in LOOKALIKE_BRANDS), default=99)
+    lookalike = len(domain_label) >= 4 and any(_is_lookalike(domain_label, b) for b in LOOKALIKE_BRANDS)
 
     f = {
         # lengths
@@ -204,7 +236,7 @@ def extract_features(url) -> dict[str, float]:
         "brand_outside_domain": int(brand_elsewhere),
         "brand_inside_domain_label": int(brand_in_label),
         "min_brand_edit_distance": min_brand_dist,
-        "brand_lookalike": int(0 < min_brand_dist <= 2 and len(domain_label) >= 4),
+        "brand_lookalike": int(lookalike),
     }
     return {k: float(v) for k, v in f.items()}
 
