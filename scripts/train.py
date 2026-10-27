@@ -10,7 +10,8 @@ what it does:
                    wasn't used to pick anything so its score is honest
   3. trains six models, from dumbest to smartest
   4. picks a threshold for each model on validation (the cutoff where about
-     1% of legit urls get flagged) and picks the best model
+     1% of legit urls get flagged) and picks the best model (most phishing
+     caught while false alarms stay under 5%, see low_fpr_recall)
   5. scores every model on the test set once
   6. saves the best one to models/model.joblib and dumps charts, a results
      table, and a list of every mistake into reports/
@@ -60,6 +61,7 @@ SEED = 42
 # C values to try for the char n-gram models, see pick_c()
 C_VALUES = [0.25, 0.5, 1.0, 2.0, 4.0]
 MAX_FPR = 0.01  # flagging 1 in 100 legit urls is about as many false alarms as anyone would put up with
+LOW_FPR = 0.05  # for picking models, see low_fpr_recall()
 
 
 def only_features():
@@ -206,6 +208,16 @@ def recall_at_fpr(y_true, y_prob, max_fpr=MAX_FPR):
     return float(best_recall), float(threshold)
 
 
+def low_fpr_recall(y_true, y_prob, max_fpr=LOW_FPR):
+    # average recall while false alarms stay between 0% and 5%. recall at exactly
+    # 1% fpr depends on like 15 legit urls so it jumps around a lot between runs
+    # (two models tied at 0.710 on validation and then landed 0.1 apart on test).
+    # averaging over the whole low false alarm part of the curve is way steadier
+    fpr, tpr, _ = roc_curve(y_true, y_prob)
+    grid = np.linspace(0, max_fpr, 101)
+    return float(np.interp(grid, fpr, tpr).mean())
+
+
 def pick_c(model, X_train, y_train, X_val, y_val):
     # C is how much the model trusts the training data. big C = it memorizes rare
     # url chunks and gets way too sure of itself (100.0% on everything). small C
@@ -216,11 +228,11 @@ def pick_c(model, X_train, y_train, X_val, y_val):
         model.set_params(logisticregression__C=c)
         model.fit(X_train, y_train)
         prob = model.predict_proba(X_val)[:, 1]
-        recall, _ = recall_at_fpr(y_val, prob)
-        print(f"  C={c}: val recall at 1% fpr {recall:.3f}")
-        if best_score is None or (recall, roc_auc_score(y_val, prob)) > best_score:
+        val_score = low_fpr_recall(y_val, prob)
+        print(f"  C={c}: val avg recall at 0-5% fpr {val_score:.3f}")
+        if best_score is None or val_score > best_score:
             best_c = c
-            best_score = (recall, roc_auc_score(y_val, prob))
+            best_score = val_score
 
     # fit it one last time with the winner
     model.set_params(logisticregression__C=best_c)
@@ -298,7 +310,8 @@ def main():
         if val_recall == 0:
             threshold = 0.5  # can't get under 1% fpr at all (the baseline), just use 0.5
         val_results[name] = {"roc_auc": score(y_val, val_prob)["roc_auc"],
-                             "recall_at_1pct_fpr": val_recall}
+                             "recall_at_1pct_fpr": val_recall,
+                             "low_fpr_recall": low_fpr_recall(y_val, val_prob)}
         thresholds[name] = threshold
 
         # then score test once, using the threshold from validation
@@ -311,21 +324,21 @@ def main():
         probs[name] = prob
         fitted[name] = model
 
-    # pick the winner on VALIDATION, whoever catches the most phishing at 1%
-    # false alarms. roc auc if it's a tie. the baseline obviously isn't allowed to win
+    # pick the winner on VALIDATION, whoever catches the most phishing while
+    # false alarms stay low. the baseline obviously isn't allowed to win
     real_models = [n for n in results if not n.startswith("Baseline")]
-    best = max(real_models, key=lambda n: (val_results[n]["recall_at_1pct_fpr"], val_results[n]["roc_auc"]))
+    best = max(real_models, key=lambda n: val_results[n]["low_fpr_recall"])
     best_threshold = thresholds[best]
 
     # --- results table (this is the one that goes in the README) ---
     cols = ["accuracy", "precision", "recall", "f1", "false_positive_rate", "roc_auc", "recall_at_1pct_fpr"]
     table = pd.DataFrame(results).T[cols]
-    table.insert(0, "val_recall_at_1pct_fpr", [val_results[n]["recall_at_1pct_fpr"] for n in table.index])
+    table.insert(0, "val_low_fpr_recall", [val_results[n]["low_fpr_recall"] for n in table.index])
     print("\nTest set, each model at the threshold picked on validation:")
     print(table.round(3).to_string())
 
     md = [
-        "| Model | Val recall @ 1% FPR | Accuracy | Precision | Recall | F1 | False positive rate | ROC AUC | Recall @ 1% FPR |",
+        "| Model | Val avg recall @ 0-5% FPR | Accuracy | Precision | Recall | F1 | False positive rate | ROC AUC | Recall @ 1% FPR |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
     for name, row in table.iterrows():
