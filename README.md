@@ -195,3 +195,6 @@ Here we see that the #1 feature is `subdomain_length` That’s a red flag, since
 
 My best guess is that sitemaps list official `www.` URLs, so the model learned "has www = legit" instead of anything about phishing, which is also why a plain `github.com/nuggetofwisdom` looked suspicious. On top of that, 76% of my phishing URLs were only 0–1 folders deep, but only 14% of my legit URLs were exactly 1 deep, so short paths got lumped in with phishing too. To fix it, I'm stripping `www.` before extracting features and re-collecting legit URLs spread evenly across path depths. I saved the old reports in `reports/v1-before-fix/` so I can compare once I retrain, and I expect the accuracy might drop a little, since the model is losing a shortcut it shouldn't have had.
 
+--------------------
+
+After retraining, `subdomain_length` dropped from 25% to 11% importance, my GitHub URL went from 95% to 48.7% phishing, and the false positive rate fell from 9.4% to 7.8%, while accuracy dropped from 0.92 to 0.89 because the model lost a shortcut it shouldn't have had.
