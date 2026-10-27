@@ -1,0 +1,46 @@
+# real login/account pages for the brands in BRANDS (features.py)
+# these have everything that looks like phishing (login words, brand names,
+# subdomains) but they're legit, so the model has to learn the actual domain
+# is what matters. one url per line
+https://accounts.google.com/signin
+https://accounts.google.com/v3/signin/identifier
+https://myaccount.google.com/security
+https://login.microsoftonline.com/
+https://login.live.com/
+https://account.microsoft.com/account
+https://outlook.live.com/mail/
+https://www.office.com/login
+https://www.paypal.com/signin
+https://www.paypal.com/myaccount/summary
+https://appleid.apple.com/sign-in
+https://www.icloud.com/
+https://support.apple.com/
+https://www.amazon.com/ap/signin
+https://www.amazon.com/gp/css/order-history
+https://www.netflix.com/login
+https://www.facebook.com/login/
+https://www.instagram.com/accounts/login/
+https://www.linkedin.com/login
+https://secure.chase.com/web/auth/dashboard
+https://connect.secure.wellsfargo.com/auth/login/present
+https://secure.bankofamerica.com/login/sign-in/signOnV2Screen.go
+https://online.citi.com/US/login.do
+https://www.coinbase.com/signin
+https://accounts.binance.com/en/login
+https://store.steampowered.com/login/
+https://www.roblox.com/login
+https://account.adobe.com/
+https://www.dropbox.com/login
+https://account.docusign.com/
+https://reg.usps.com/entreg/LoginAction_input
+https://www.usps.com/manage/
+https://www.fedex.com/en-us/tracking.html
+https://www.ups.com/track
+https://www.dhl.com/us-en/home/tracking.html
+https://signin.att.com/
+https://login.verizon.com/
+https://sa.www4.irs.gov/ola/
+https://github.com/login
+https://login.yahoo.com/
+https://signin.ebay.com/
+https://www.walmart.com/account/login

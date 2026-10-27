@@ -23,6 +23,7 @@ Run everything from the repo root.
 
 ```bash
 python -m scripts.collect_data     # 1. pull phishing + legit URLs into data/raw/
+python -m scripts.add_urls seeds/legit_logins.txt --label legit --source legit_logins   # optional, add my own url lists
 python -m scripts.build_dataset    # 2. dedupe, cap per-domain, balance -> data/processed/dataset.csv
 python -m scripts.train            # 3. train and compare models -> models/model.joblib, reports/
 python -m scripts.predict "http://paypal.com.secure-verify.xyz/signin.php"   # 4. score URLs
@@ -40,9 +41,11 @@ phishdetect/
   model_io.py      save/load the trained model
 scripts/
   collect_data.py  OpenPhish, PhishTank, Phishunt (phishing); Tranco + sitemaps (legit)
+  add_urls.py      add my own list of URLs (like seeds/legit_logins.txt)
   build_dataset.py clean and balance the raw data
   train.py         train, evaluate, and save the best model
   predict.py       score URLs from the command line
+seeds/             URL lists for add_urls.py
 tests/             pytest suite for the feature code
 ```
 
