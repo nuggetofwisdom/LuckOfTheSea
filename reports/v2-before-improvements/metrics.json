@@ -1,0 +1,76 @@
+{
+  "best": {
+    "model_name": "Random Forest",
+    "trained_at": "2026-10-27T03:44:22+00:00",
+    "split": "domain",
+    "n_train": 8712,
+    "n_test": 2140,
+    "test_metrics": {
+      "accuracy": 0.9037383177570093,
+      "precision": 0.9144800777453839,
+      "recall": 0.8885741265344664,
+      "f1": 0.9013409961685823,
+      "false_positive_rate": 0.08140610545790934,
+      "roc_auc": 0.9646944956188049,
+      "tp": 941,
+      "fp": 88,
+      "tn": 993,
+      "fn": 118,
+      "recall_at_1pct_fpr": 0.6902738432483475
+    }
+  },
+  "all_models": {
+    "Baseline (always guess majority)": {
+      "accuracy": 0.49485981308411214,
+      "precision": 0.49485981308411214,
+      "recall": 1.0,
+      "f1": 0.6620819005939356,
+      "false_positive_rate": 1.0,
+      "roc_auc": 0.5,
+      "tp": 1059,
+      "fp": 1081,
+      "tn": 0,
+      "fn": 0,
+      "recall_at_1pct_fpr": 0.0
+    },
+    "Logistic Regression": {
+      "accuracy": 0.8518691588785047,
+      "precision": 0.8824742268041237,
+      "recall": 0.8083097261567517,
+      "f1": 0.8437654016757024,
+      "false_positive_rate": 0.10545790934320073,
+      "roc_auc": 0.9432702731269529,
+      "tp": 856,
+      "fp": 114,
+      "tn": 967,
+      "fn": 203,
+      "recall_at_1pct_fpr": 0.6562795089707271
+    },
+    "Random Forest": {
+      "accuracy": 0.9037383177570093,
+      "precision": 0.9144800777453839,
+      "recall": 0.8885741265344664,
+      "f1": 0.9013409961685823,
+      "false_positive_rate": 0.08140610545790934,
+      "roc_auc": 0.9646944956188049,
+      "tp": 941,
+      "fp": 88,
+      "tn": 993,
+      "fn": 118,
+      "recall_at_1pct_fpr": 0.6902738432483475
+    },
+    "XGBoost": {
+      "accuracy": 0.8981308411214953,
+      "precision": 0.892623716153128,
+      "recall": 0.902738432483475,
+      "f1": 0.8976525821596244,
+      "false_positive_rate": 0.10638297872340426,
+      "roc_auc": 0.9643774038482538,
+      "tp": 956,
+      "fp": 115,
+      "tn": 966,
+      "fn": 103,
+      "recall_at_1pct_fpr": 0.6874409820585458
+    }
+  }
+}
