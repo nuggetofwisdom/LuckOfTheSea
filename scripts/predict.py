@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 
 from phishdetect.allowlist import is_trusted, load_allowlist
-from phishdetect.features import red_flags
+from phishdetect.features import extract_features, red_flags
 from phishdetect.model_io import DEFAULT_MODEL_PATH, load_model, predict_proba
 
 
@@ -56,6 +56,14 @@ def main():
     for url, prob in zip(args.urls, probs):
         if is_trusted(url, allowlist):
             print(f"{'trusted domain':>16}  {'--':>6}  {url}")
+            continue
+
+        # a bit.ly link says nothing about where it actually goes, so don't guess.
+        # every shortener in my data was phishing, so the model would just say phishing
+        if extract_features(url)["is_url_shortener"]:
+            verdict = "can't tell"
+            print(f"{verdict:>16}  {'--':>6}  {url}")
+            print(f"{'':>26}- Link shortener hides the real destination, expand it and check that instead")
             continue
 
         if prob >= threshold:
