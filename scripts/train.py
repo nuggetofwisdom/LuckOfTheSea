@@ -58,8 +58,18 @@ from phishdetect.model_io import DEFAULT_MODEL_PATH, save_model
 DATASET = Path("data/processed/dataset.csv")
 REPORTS = Path("reports")
 SEED = 42
-# C values to try for the char n-gram models, see pick_c()
+# settings to try for each model on validation, see tune()
 C_VALUES = [0.25, 0.5, 1.0, 2.0, 4.0]
+TUNING = {
+    # how deep each tree can go. deeper = learns more complicated combos but
+    # also memorizes more
+    "XGBoost": ("xgbclassifier__max_depth", [3, 4, 6, 8]),
+    # C is how much the model trusts the training data. big C = it memorizes rare
+    # url chunks and gets way too sure of itself (100.0% on everything). small C
+    # = more careful
+    "Char n-grams": ("logisticregression__C", C_VALUES),
+    "Char n-grams + features": ("logisticregression__C", C_VALUES),
+}
 MAX_FPR = 0.01  # flagging 1 in 100 legit urls is about as many false alarms as anyone would put up with
 LOW_FPR = 0.05  # for picking models, see low_fpr_recall()
 
@@ -218,26 +228,24 @@ def low_fpr_recall(y_true, y_prob, max_fpr=LOW_FPR):
     return float(np.interp(grid, fpr, tpr).mean())
 
 
-def pick_c(model, X_train, y_train, X_val, y_val):
-    # C is how much the model trusts the training data. big C = it memorizes rare
-    # url chunks and gets way too sure of itself (100.0% on everything). small C
-    # = more careful. try a few and keep whichever does best on validation
-    best_c = None
+def tune(model, param, values, X_train, y_train, X_val, y_val):
+    # try each value of one setting and keep whichever does best on validation
+    best_value = None
     best_score = None
-    for c in C_VALUES:
-        model.set_params(logisticregression__C=c)
+    for value in values:
+        model.set_params(**{param: value})
         model.fit(X_train, y_train)
         prob = model.predict_proba(X_val)[:, 1]
         val_score = low_fpr_recall(y_val, prob)
-        print(f"  C={c}: val avg recall at 0-5% fpr {val_score:.3f}")
+        print(f"  {param.split('__')[-1]}={value}: val avg recall at 0-5% fpr {val_score:.3f}")
         if best_score is None or val_score > best_score:
-            best_c = c
+            best_value = value
             best_score = val_score
 
     # fit it one last time with the winner
-    model.set_params(logisticregression__C=best_c)
+    model.set_params(**{param: best_value})
     model.fit(X_train, y_train)
-    return model, best_c
+    return model, best_value
 
 
 def feature_importance(model):
@@ -297,10 +305,12 @@ def main():
     thresholds = {}
     for name, model in build_models().items():
         print(f"Training {name}...")
-        c = None
-        if name.startswith("Char"):
-            model, c = pick_c(model, X_train, y_train, X_val, y_val)
-            print(f"  using C={c}")
+        tuned = None
+        if name in TUNING:
+            param, values = TUNING[name]
+            model, value = tune(model, param, values, X_train, y_train, X_val, y_val)
+            tuned = {param.split("__")[-1]: value}
+            print(f"  using {tuned}")
         else:
             model.fit(X_train, y_train)
 
@@ -319,8 +329,8 @@ def main():
         results[name] = score(y_test, prob, threshold)
         results[name]["recall_at_1pct_fpr"], _ = recall_at_fpr(y_test, prob)
         results[name]["threshold"] = threshold
-        if c is not None:
-            results[name]["C"] = c
+        if tuned:
+            results[name]["tuned"] = tuned
         probs[name] = prob
         fitted[name] = model
 
