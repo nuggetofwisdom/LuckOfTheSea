@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Collected data (regenerate with scripts/collect_data.py + build_dataset.py)
+data/
+
+# Trained model (regenerate with scripts/train.py)
+models/

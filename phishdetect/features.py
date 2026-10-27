@@ -67,6 +67,12 @@ def _normalize(url):
     return url
 
 
+def _strip_www(url):
+    # sitemaps list the official www. version of every site, so "has www" ended
+    # up meaning "legit" to the model. drop it, but only at the very start of the host
+    return re.sub(r"^((?:[a-zA-Z][a-zA-Z0-9+.-]*://)?)www\.", r"\1", url, flags=re.IGNORECASE)
+
+
 def shannon_entropy(text):
     # how random a string looks (bits per char). "google" is low,
     # "x7kq9zp2vb" is high. phishing kits love random subdomains/paths
@@ -117,7 +123,7 @@ def registered_domain(url):
 # --- main feature extraction ---
 
 def extract_features(url) -> dict[str, float]:
-    raw = str(url).strip()
+    raw = _strip_www(str(url).strip())
     norm = _normalize(raw)
 
     try:
