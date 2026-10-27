@@ -9,3 +9,6 @@ data/
 
 # Trained model (regenerate with scripts/train.py)
 models/
+
+# my own url lists (browser history etc), never commit these
+private/
