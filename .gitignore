@@ -12,3 +12,4 @@ models/
 
 # my own url lists (browser history etc), never commit these
 private/
+reports/errors.csv
