@@ -110,3 +110,12 @@ def test_disguised_brands_in_domain():
     # the real ones and normal words shouldn't count
     assert extract_features("https://apple.com/")["brand_inside_domain_label"] == 0
     assert extract_features("https://corner-store.com/")["brand_inside_domain_label"] == 0
+
+
+def test_real_words_arent_lookalikes():
+    # "cloud" is 1 letter off from "icloud" but it's just a word
+    assert extract_features("https://outlook.cloud.microsoft/mail/")["brand_lookalike"] == 0
+    assert extract_features("https://www.cloud.com/legal/terms")["brand_lookalike"] == 0
+    # these should still count
+    assert extract_features("https://paypall.com/")["brand_lookalike"] == 1
+    assert extract_features("https://micros0ft.com/")["brand_lookalike"] == 1

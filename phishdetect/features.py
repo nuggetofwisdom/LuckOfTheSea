@@ -123,6 +123,16 @@ def _skeleton(label):
 def _is_lookalike(label, brand):
     # paypa1 vs paypal is 1 edit. short brands only get 1 edit, longer ones
     # get 2, otherwise "apps" counts as a fake "apple"
+    if label == brand:
+        return False  # that's just the real one
+    if _skeleton(label) == brand:
+        return True  # micros0ft, xn--pple-43d
+
+    # typosquats swap a letter (amaz0n) or add one (paypall). a label that's
+    # shorter than the brand is almost always just a real word that happens to
+    # be close, like "cloud" vs "icloud" (outlook.cloud.microsoft, cloud.com)
+    if len(label) < len(brand):
+        return False
     dist = levenshtein(label, brand)
     if len(brand) <= 6:
         return 0 < dist <= 1
