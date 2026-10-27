@@ -88,3 +88,9 @@ def test_short_brands_have_to_be_whole_words():
 def test_lookalike_has_to_be_close():
     assert extract_features("https://amaz0n.com/")["brand_lookalike"] == 1
     assert extract_features("https://apps.com/")["brand_lookalike"] == 0  # 2 letters off from apple, too far
+
+
+def test_hosting_sites_count_as_separate_sites():
+    assert registered_domain("https://evil-login.weebly.com/x") == "evil-login.weebly.com"
+    assert registered_domain("https://mybank-verify.web.app/") == "mybank-verify.web.app"
+    assert registered_domain("https://nuggetofwisdom.github.io/") == "nuggetofwisdom.github.io"

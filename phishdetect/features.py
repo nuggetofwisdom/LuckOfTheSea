@@ -21,7 +21,13 @@ import tldextract
 
 # suffix_list_urls=() -> use the public suffix list that ships with tldextract
 # instead of downloading it every time. works offline + results don't change
-_EXTRACT = tldextract.TLDExtract(suffix_list_urls=())
+# include_psl_private_domains=True makes free hosting sites (web.app, github.io,
+# pages.dev, etc) count as a suffix. so evil-login.web.app is its own site instead
+# of every firebase page getting lumped together as "web.app"
+_EXTRACT = tldextract.TLDExtract(suffix_list_urls=(), include_psl_private_domains=True)
+
+# site builders that get used for phishing but aren't on that list yet
+EXTRA_HOSTING_SUFFIXES = {"weebly.com", "000webhostapp.com", "godaddysites.com", "mystrikingly.com"}
 
 # words that show up a lot on credential harvesting pages
 SUSPICIOUS_WORDS = [
@@ -143,12 +149,28 @@ def _is_ip(host):
         return bool(re.fullmatch(r"(0x[0-9a-f]+|\d{8,10})", host, re.IGNORECASE))
 
 
+def _split_host(url):
+    # "login.paypal.com.evil.co.uk" -> ("login.paypal.com", "evil", "co.uk")
+    parts = _EXTRACT(url)
+    sub = (parts.subdomain or "").lower()
+    label = (parts.domain or "").lower()
+    suffix = (parts.suffix or "").lower()
+
+    # abc.weebly.com should be the site "abc" not weebly, same as web.app
+    if sub and f"{label}.{suffix}" in EXTRA_HOSTING_SUFFIXES:
+        sub_parts = sub.split(".")
+        suffix = f"{label}.{suffix}"
+        label = sub_parts[-1]
+        sub = ".".join(sub_parts[:-1])
+    return sub, label, suffix
+
+
 def registered_domain(url):
     # "https://login.paypal.com.evil.co.uk/x" -> "evil.co.uk"
-    parts = _EXTRACT(_normalize(url))
-    if parts.domain and parts.suffix:
-        return f"{parts.domain}.{parts.suffix}".lower()
-    return (parts.domain or urlsplit(_normalize(url)).hostname or "").lower()
+    _, label, suffix = _split_host(_normalize(url))
+    if label and suffix:
+        return f"{label}.{suffix}"
+    return (label or urlsplit(_normalize(url)).hostname or "").lower()
 
 
 # --- main feature extraction ---
@@ -173,12 +195,10 @@ def extract_features(url) -> dict[str, float]:
     path = parts.path or ""
     query = parts.query or ""
 
-    ext = _EXTRACT(norm)
-    domain_label = (ext.domain or "").lower()        # "paypal" from paypal.com
-    subdomain = (ext.subdomain or "").lower()        # "login.secure"
-    tld = (ext.suffix or "").lower().split(".")[-1]  # "com"
-    if ext.suffix:
-        reg_domain = f"{domain_label}.{ext.suffix}".lower()
+    subdomain, domain_label, suffix = _split_host(norm)  # "login.secure", "paypal", "com"
+    tld = suffix.split(".")[-1]                           # "uk" from co.uk
+    if suffix:
+        reg_domain = f"{domain_label}.{suffix}"
     else:
         reg_domain = domain_label
     lower = raw.lower()
