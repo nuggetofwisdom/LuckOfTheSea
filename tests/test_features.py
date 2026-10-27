@@ -101,3 +101,12 @@ def test_model_input_has_features_and_url():
     X = model_input(["https://github.com", "paypa1.com/login"])
     assert list(X.columns) == FEATURE_NAMES + ["url"]
     assert X.url.tolist() == ["https://github.com", "paypa1.com/login"]
+
+
+def test_disguised_brands_in_domain():
+    assert extract_features("https://micros0ft-online.com/login")["brand_inside_domain_label"] == 1
+    assert extract_features("https://xn--pple-43d.com/")["brand_inside_domain_label"] == 1  # cyrillic a
+    assert extract_features("https://rnicrosoft.com/")["brand_inside_domain_label"] == 1
+    # the real ones and normal words shouldn't count
+    assert extract_features("https://apple.com/")["brand_inside_domain_label"] == 0
+    assert extract_features("https://corner-store.com/")["brand_inside_domain_label"] == 0

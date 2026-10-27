@@ -69,6 +69,14 @@ SUBSTRING_BRAND_MIN = 6
 # is 1 or 2 letters off from "ups" or "att"
 LOOKALIKE_BRANDS = [b for b in BRANDS if len(b) >= 5]
 
+# numbers people swap in for letters (micros0ft, paypa1)
+LEET = str.maketrans({"0": "o", "1": "l", "3": "e", "4": "a", "5": "s", "7": "t", "$": "s"})
+
+# cyrillic letters that look exactly like latin ones. "аpple" with a cyrillic а
+# is a totally different domain (xn--pple-43d.com) that looks the same in a browser
+CONFUSABLES = str.maketrans({"а": "a", "е": "e", "о": "o", "р": "p", "с": "c",
+                             "у": "y", "х": "x", "і": "i", "ӏ": "l"})
+
 SUSPICIOUS_EXTENSIONS = (".php", ".html", ".htm", ".asp", ".aspx", ".js", ".exe", ".zip")
 
 
@@ -99,6 +107,17 @@ def _mentions_brand(text, brand):
     if len(brand) >= SUBSTRING_BRAND_MIN and brand in text:
         return True
     return False
+
+
+def _skeleton(label):
+    # what a domain label looks like to a person: micros0ft -> microsoft,
+    # xn--pple-43d -> apple. also rn -> m since "rn" looks like "m" in most fonts
+    if label.startswith("xn--"):
+        try:
+            label = label.encode().decode("idna")
+        except UnicodeError:
+            pass
+    return label.translate(CONFUSABLES).translate(LEET).replace("rn", "m")
 
 
 def _is_lookalike(label, brand):
@@ -206,7 +225,9 @@ def extract_features(url) -> dict[str, float]:
     # brand stuff - is a brand name showing up somewhere it shouldn't?
     outside = subdomain + "/" + path + "?" + query
     brand_elsewhere = any(b != domain_label and _mentions_brand(outside, b) for b in BRANDS)
-    brand_in_label = any(b != domain_label and _mentions_brand(domain_label, b) for b in BRANDS)
+    # check the skeleton, but compare against the real label so apple.com itself doesn't count
+    skeleton = _skeleton(domain_label)
+    brand_in_label = any(b != domain_label and _mentions_brand(skeleton, b) for b in BRANDS)
     min_brand_dist = min((levenshtein(domain_label, b) for b in LOOKALIKE_BRANDS), default=99)
     lookalike = len(domain_label) >= 4 and any(_is_lookalike(domain_label, b) for b in LOOKALIKE_BRANDS)
 
@@ -293,6 +314,8 @@ def red_flags(url):
         flags.append("Uses punycode (xn--), which can disguise lookalike characters")
     if f["brand_lookalike"]:
         flags.append("Domain is spelled almost like a well-known brand")
+    elif f["brand_inside_domain_label"]:
+        flags.append("Has a brand name (or a disguised one) inside the domain name")
     if f["brand_outside_domain"]:
         flags.append("Mentions a brand outside the real domain name")
     if f["is_url_shortener"]:
