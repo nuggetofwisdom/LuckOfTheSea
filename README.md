@@ -26,6 +26,7 @@ python -m scripts.collect_data     # 1. pull phishing + legit URLs into data/raw
 python -m scripts.add_urls seeds/legit_logins.txt --label legit --source legit_logins   # optional, add my own url lists
 python -m scripts.build_dataset    # 2. dedupe, cap per-domain, balance -> data/processed/dataset.csv
 python -m scripts.train            # 3. train and compare models -> models/model.joblib, reports/
+python -m scripts.cross_validate   # optional, 5 splits instead of 1 to see if a gap between models is real
 python -m scripts.make_allowlist   # 4. trusted domains that skip the model -> seeds/top_domains.txt
 python -m scripts.predict "http://paypal.com.secure-verify.xyz/signin.php"   # 5. score URLs
 ```
@@ -53,6 +54,7 @@ scripts/
   make_allowlist.py  download the Tranco top sites as the allowlist
   build_dataset.py clean and balance the raw data
   train.py         train, evaluate, and save the best model
+  cross_validate.py  compare models over 5 splits
   predict.py       score URLs from the command line
 seeds/             URL lists for add_urls.py
 tests/             pytest suite for the feature code
