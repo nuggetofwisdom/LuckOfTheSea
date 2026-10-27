@@ -57,6 +57,8 @@ from phishdetect.model_io import DEFAULT_MODEL_PATH, save_model
 DATASET = Path("data/processed/dataset.csv")
 REPORTS = Path("reports")
 SEED = 42
+# C values to try for the char n-gram models, see pick_c()
+C_VALUES = [0.25, 0.5, 1.0, 2.0, 4.0]
 MAX_FPR = 0.01  # flagging 1 in 100 legit urls is about as many false alarms as anyone would put up with
 
 
@@ -107,7 +109,7 @@ def build_models():
         # ignores my 34 features completely and only reads the url text
         "Char n-grams": make_pipeline(
             ColumnTransformer([("chars", char_ngrams(), "url")], verbose_feature_names_out=False),
-            LogisticRegression(max_iter=3000, C=4.0, random_state=SEED),
+            LogisticRegression(max_iter=3000, random_state=SEED),
         ),
 
         # both: the url chunks and my 34 features together
@@ -116,7 +118,7 @@ def build_models():
                 ("chars", char_ngrams(), "url"),
                 ("features", StandardScaler(), FEATURE_NAMES),
             ], verbose_feature_names_out=False),
-            LogisticRegression(max_iter=3000, C=4.0, random_state=SEED),
+            LogisticRegression(max_iter=3000, random_state=SEED),
         ),
     }
 
@@ -204,6 +206,28 @@ def recall_at_fpr(y_true, y_prob, max_fpr=MAX_FPR):
     return float(best_recall), float(threshold)
 
 
+def pick_c(model, X_train, y_train, X_val, y_val):
+    # C is how much the model trusts the training data. big C = it memorizes rare
+    # url chunks and gets way too sure of itself (100.0% on everything). small C
+    # = more careful. try a few and keep whichever does best on validation
+    best_c = None
+    best_score = None
+    for c in C_VALUES:
+        model.set_params(logisticregression__C=c)
+        model.fit(X_train, y_train)
+        prob = model.predict_proba(X_val)[:, 1]
+        recall, _ = recall_at_fpr(y_val, prob)
+        print(f"  C={c}: val recall at 1% fpr {recall:.3f}")
+        if best_score is None or (recall, roc_auc_score(y_val, prob)) > best_score:
+            best_c = c
+            best_score = (recall, roc_auc_score(y_val, prob))
+
+    # fit it one last time with the winner
+    model.set_params(logisticregression__C=best_c)
+    model.fit(X_train, y_train)
+    return model, best_c
+
+
 def feature_importance(model):
     # if it's a pipeline, the actual model is the last step and the names of
     # what went into it come from the first step
@@ -261,7 +285,12 @@ def main():
     thresholds = {}
     for name, model in build_models().items():
         print(f"Training {name}...")
-        model.fit(X_train, y_train)
+        c = None
+        if name.startswith("Char"):
+            model, c = pick_c(model, X_train, y_train, X_val, y_val)
+            print(f"  using C={c}")
+        else:
+            model.fit(X_train, y_train)
 
         # everything gets decided on validation
         val_prob = model.predict_proba(X_val)[:, 1]
@@ -277,6 +306,8 @@ def main():
         results[name] = score(y_test, prob, threshold)
         results[name]["recall_at_1pct_fpr"], _ = recall_at_fpr(y_test, prob)
         results[name]["threshold"] = threshold
+        if c is not None:
+            results[name]["C"] = c
         probs[name] = prob
         fitted[name] = model
 
